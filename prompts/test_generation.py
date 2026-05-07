@@ -98,8 +98,6 @@ Generate 3-5 high-quality test cases that provide comprehensive coverage of the 
 Each test case must be immediately executable and include all necessary test data and assertions.
 
 Return results as valid JSON array with consistent structure and realistic test data.
-"""
-
 Return the response as a valid JSON array of test case objects.
 """
 

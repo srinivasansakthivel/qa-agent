@@ -1,5 +1,7 @@
 # Frontend Dockerfile
-FROM node:18-alpine
+FROM node:20-alpine
+
+RUN apk add --no-cache curl
 
 # Create app directory
 WORKDIR /app
@@ -8,7 +10,7 @@ WORKDIR /app
 COPY frontend/package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy application code
 COPY frontend/ .
@@ -21,7 +23,7 @@ EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:3000/api/health || exit 1
+    CMD curl -f http://localhost:3000/ || exit 1
 
 # Run the application
 CMD ["npm", "start"]

@@ -6,14 +6,15 @@ Manages AI agent execution, coordination, and lifecycle.
 
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.models.models import AgentExecution
 from app.schemas.agents import AgentInfo, AgentStatusResponse, AgentExecutionHistory
-from app.agents.test_generator.agent import TestGeneratorAgent
-from app.agents.bug_analyzer.agent import BugAnalyzerAgent
+from agents.test_generator.agent import TestGeneratorAgent
+from agents.bug_analyzer.agent import BugAnalyzerAgent
 
 logger = structlog.get_logger(__name__)
 
@@ -39,8 +40,6 @@ class AgentService:
 
         Returns an execution ID for tracking.
         """
-        execution_id = str(uuid.uuid4())
-
         # Create execution record
         execution = AgentExecution(
             agent_name=request.agent_name,
@@ -51,6 +50,8 @@ class AgentService:
 
         self.db.add(execution)
         await self.db.commit()
+        await self.db.refresh(execution)
+        execution_id = str(execution.id)
 
         logger.info(
             "Agent execution initiated",
@@ -68,7 +69,7 @@ class AgentService:
         """
         try:
             # Get execution record
-            execution = await self.db.get(AgentExecution, execution_id)
+            execution = await self.db.get(AgentExecution, int(execution_id))
             if not execution:
                 logger.error("Execution not found", execution_id=execution_id)
                 return
@@ -119,7 +120,7 @@ class AgentService:
         """
         Get the status of an agent execution.
         """
-        execution = await self.db.get(AgentExecution, execution_id)
+        execution = await self.db.get(AgentExecution, int(execution_id))
         if not execution:
             raise ValueError(f"Execution {execution_id} not found")
 
@@ -159,14 +160,15 @@ class AgentService:
         """
         Get execution history for agents.
         """
-        query = self.db.query(AgentExecution)
+        stmt = select(AgentExecution)
 
         if agent_name:
-            query = query.filter(AgentExecution.agent_name == agent_name)
+            stmt = stmt.where(AgentExecution.agent_name == agent_name)
 
-        executions = await query.order_by(
-            AgentExecution.created_at.desc()
-        ).limit(limit).all()
+        result = await self.db.execute(
+            stmt.order_by(AgentExecution.created_at.desc()).limit(limit)
+        )
+        executions = result.scalars().all()
 
         return [
             AgentExecutionHistory(
@@ -187,7 +189,7 @@ class AgentService:
         """
         Stop a running agent execution.
         """
-        execution = await self.db.get(AgentExecution, execution_id)
+        execution = await self.db.get(AgentExecution, int(execution_id))
         if not execution or execution.status not in ["pending", "running"]:
             return False
 

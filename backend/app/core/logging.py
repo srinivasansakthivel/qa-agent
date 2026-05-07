@@ -7,8 +7,6 @@ with appropriate formatters for development and production.
 
 import sys
 import logging
-from typing import Any, Dict
-from pythonjsonlogger import jsonlogger
 
 import structlog
 

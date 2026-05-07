@@ -186,16 +186,6 @@ class BaseAgent(ABC):
                 error_count=self.error_count
             )
             raise RuntimeError(f"LLM call failed: {str(e)}") from e
-        For now, returns mock responses.
-        """
-        self.logger.info(
-            "Calling LLM",
-            model=model or "default",
-            prompt_length=len(prompt)
-        )
-
-        # Mock LLM call - replace with actual API integration
-        return await self._mock_llm_call(prompt, temperature)
 
     async def _mock_llm_call(self, prompt: str, temperature: float) -> str:
         """

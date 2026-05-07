@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = Field(
         default=False,
-        env="DEBUG",
+        validation_alias="AI_QA_AGENT_DEBUG",
         description="Enable debug mode (WARNING: May expose sensitive AI data in logs)"
     )
 
@@ -84,10 +84,10 @@ class Settings(BaseSettings):
     # Primary AI Provider - OpenAI
     # GPT-4-turbo-preview selected for optimal reasoning capabilities
     # while maintaining cost efficiency
-    OPENAI_API_KEY: str = Field(
-        ...,
+    OPENAI_API_KEY: Optional[str] = Field(
+        default=None,
         env="OPENAI_API_KEY",
-        description="OpenAI API key - REQUIRED for AI functionality"
+        description="OpenAI API key. Optional for the mocked local demo agent."
     )
     OPENAI_MODEL: str = Field(
         default="gpt-4-turbo-preview",
@@ -125,14 +125,12 @@ class Settings(BaseSettings):
         env="CHROMA_DB_PATH",
         description="Local ChromaDB storage path"
     )
-    CHROMA_DB_PATH: str = "./data/chromadb"
-
     # Playwright
     PLAYWRIGHT_BROWSERS_PATH: Optional[str] = None
     PLAYWRIGHT_HEADLESS: bool = True
 
     # Security
-    SECRET_KEY: str = Field(..., env="SECRET_KEY")
+    SECRET_KEY: str = Field(default="dev-only-change-me", env="SECRET_KEY")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # Observability

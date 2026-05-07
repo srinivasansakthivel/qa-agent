@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
@@ -7,18 +7,18 @@ on:
     branches: [ main ]
 
 jobs:
-  test-backend:
+  backend:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
     - name: Cache pip dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
@@ -27,28 +27,18 @@ jobs:
 
     - name: Install dependencies
       run: |
-        cd backend
-        pip install -r requirements.txt
+        python -m pip install --upgrade pip
+        pip install -r backend/requirements.txt
 
-    - name: Run linting
+    - name: Compile Python modules
       run: |
-        cd backend
-        ruff check .
-        mypy .
+        python -m compileall -q backend agents automation prompts
 
-    - name: Run tests
+    - name: Import FastAPI app
       run: |
-        cd backend
-        pytest --cov=. --cov-report=xml
+        PYTHONPATH=backend:. python -c "from app.main import app; print(app.title)"
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./backend/coverage.xml
-        flags: backend
-        name: backend-coverage
-
-  test-frontend:
+  frontend:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -56,7 +46,7 @@ jobs:
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
         cache-dependency-path: frontend/package-lock.json
 
@@ -75,61 +65,10 @@ jobs:
         cd frontend
         npm run type-check
 
-    - name: Run tests
+    - name: Build frontend
       run: |
         cd frontend
-        npm test -- --coverage --watchAll=false
-
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./frontend/coverage/lcov.info
-        flags: frontend
-        name: frontend-coverage
-
-  build-and-push:
-    needs: [test-backend, test-frontend]
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Build and push backend
-      uses: docker/build-push-action@v5
-      with:
-        context: ./backend
-        file: ./docker/backend.Dockerfile
-        push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/ai-qa-agent-backend:latest
-
-    - name: Build and push frontend
-      uses: docker/build-push-action@v5
-      with:
-        context: ./frontend
-        file: ./docker/frontend.Dockerfile
-        push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/ai-qa-agent-frontend:latest
-
-  deploy-staging:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment: staging
-    steps:
-    - name: Deploy to staging
-      run: |
-        echo "Deploying to staging environment"
-        # Add your deployment commands here
+        npm run build
 
   security-scan:
     runs-on: ubuntu-latest

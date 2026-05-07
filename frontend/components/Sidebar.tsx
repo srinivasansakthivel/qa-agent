@@ -1,6 +1,5 @@
 import {
   ChartBarIcon,
-  CogIcon,
   DocumentTextIcon,
   PlayIcon,
   CpuChipIcon,

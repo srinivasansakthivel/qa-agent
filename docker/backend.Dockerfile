@@ -22,6 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY backend/ .
+COPY agents/ ./agents/
+COPY prompts/ ./prompts/
+COPY automation/ ./automation/
 
 # Create non-root user
 RUN useradd --create-home --shell /bin/bash app \

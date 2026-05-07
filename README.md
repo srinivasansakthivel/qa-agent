@@ -1,29 +1,25 @@
 # AI-QA-Agent
 
-A production-grade AI-powered QA Agent platform that demonstrates modern autonomous QA engineering practices.
+An AI-assisted QA Agent prototype for generating test cases, analyzing failures, and demonstrating the architecture of an autonomous QA platform.
 
 ## Overview
 
-AI-QA-Agent is an enterprise-grade QA platform that leverages artificial intelligence to automate and enhance software testing processes. It combines AI-native testing capabilities with scalable architecture to provide intelligent, self-healing automation for API, UI, and AI workflow testing.
+AI-QA-Agent combines a FastAPI backend, a Next.js dashboard, reusable agent classes, prompt templates, and automation runner scaffolding. The current implementation is intentionally interview-friendly: the test generation and bug analysis agents run with deterministic mock LLM responses, while the architecture leaves clear extension points for real LLM providers, vector search, Playwright execution, and analytics.
 
 ## Features
 
 ### Core Capabilities
-- **AI Test Case Generator**: Generate comprehensive test cases from PRDs, user stories, APIs, screenshots, and Swagger specs
-- **Autonomous UI QA Agent**: Intelligent DOM reading, self-healing locators, and failure diagnosis
-- **API Testing Agent**: Auto-discovery, schema validation, and contract testing
-- **Bug Analysis Agent**: Log analysis, screenshot interpretation, and Jira-ready bug reports
-- **AI Regression Analyzer**: Flaky test detection and regression prediction
-- **Test Data Generator**: Synthetic data generation with PII safety
-- **AI Test Review Assistant**: Automation code review and improvement suggestions
-- **Analytics Dashboard**: Test execution insights and coverage heatmaps
+- **Test Case Generator**: Generates structured test cases from user stories, PRDs, and API-style inputs
+- **Bug Analysis Agent**: Produces root-cause summaries and remediation suggestions from failure data
+- **Automation Runner Scaffolding**: Playwright and API runner modules with self-healing and contract-testing extension points
+- **Analytics Dashboard**: Frontend dashboard for QA metrics and agent workflows
+- **FastAPI Backend**: Versioned API routes for health checks, agents, generation, execution, and analytics
 
 ### Advanced Features
-- Self-healing locators with semantic DOM understanding
-- Screenshot anomaly detection
-- RAG-based historical bug analysis
-- Autonomous exploratory testing
-- AI-generated root cause analysis
+- Deterministic mock agent responses for local demos without API keys
+- Clear LLM provider abstraction points for OpenAI/LangChain integration
+- Async service layer and SQLAlchemy models for generated tests and agent executions
+- Docker Compose setup for PostgreSQL, Redis, ChromaDB, backend, and frontend
 
 ## Architecture
 
@@ -37,12 +33,9 @@ The platform follows clean architecture principles with domain-driven design:
 ### Key Components
 - `agents/`: AI agent implementations
 - `prompts/`: LLM prompt templates
-- `orchestration/`: Agent coordination and workflows
-- `automation/`: Test execution engines
-- `memory/`: Agent memory management
-- `vectorstore/`: Vector database for embeddings
-- `observability/`: Monitoring and logging
-- `plugins/`: Extensible plugin system
+- `automation/`: UI and API test execution runner scaffolding
+- `backend/`: FastAPI application, schemas, services, and models
+- `frontend/`: Next.js dashboard
 
 ## Tech Stack
 
@@ -71,7 +64,7 @@ The platform follows clean architecture principles with domain-driven design:
 
 ### Infrastructure
 - PostgreSQL
-- Redis + Celery
+- Redis
 - Docker
 - OpenTelemetry
 - Prometheus
@@ -81,54 +74,51 @@ The platform follows clean architecture principles with domain-driven design:
 ### Prerequisites
 - Docker and Docker Compose
 - Python 3.11+
-- Node.js 18+
+- Node.js 20+
 
 ### Setup
 
 1. Clone the repository
 ```bash
-git clone https://github.com/epifi/qa-agent.git
+git clone https://github.com/srinivasansakthivel/qa-agent.git
 cd qa-agent
 ```
 
-2. Start the infrastructure
+2. Start the stack with Docker
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
+
+Or run services locally:
 
 3. Install backend dependencies
 ```bash
-cd backend
-pip install -r requirements.txt
+python -m pip install -r backend/requirements.txt
 ```
 
 4. Install frontend dependencies
 ```bash
-cd ../frontend
+cd frontend
 npm install
 ```
 
 5. Start the backend
 ```bash
-cd ../backend
+cd ..
+export PYTHONPATH=backend:.
 uvicorn app.main:app --reload
 ```
 
 6. Start the frontend
 ```bash
-cd ../frontend
+cd frontend
 npm run dev
 ```
 
 ## Documentation
 
 - [System Design](docs/system_design.md)
-- [Agent Architecture](docs/agent_architecture.md)
-- [AI Testing Strategy](docs/ai_testing_strategy.md)
-- [Prompt Engineering](docs/prompt_engineering.md)
-- [Scalability Guide](docs/scalability.md)
-- [Security Considerations](docs/security.md)
-- [Observability](docs/observability.md)
+- [AI Engineering Review](docs/AI_ENGINEERING_REVIEW.md)
 
 ## API Documentation
 
@@ -150,19 +140,18 @@ pre-commit install
 
 ### Running Tests
 ```bash
-# Backend tests
-cd backend && pytest
+# Backend import/compile smoke checks
+python -m compileall -q backend agents automation prompts
+PYTHONPATH=backend:. python -c "from app.main import app; print(app.title)"
 
-# Frontend tests
-cd frontend && npm test
+# Frontend checks
+cd frontend && npm run type-check && npm run build
 ```
 
 ## Deployment
 
 ### Docker
-```bash
-docker-compose -f docker-compose.prod.yml up -d
-```
+Use `docker compose up -d` for the local multi-service stack.
 
 ### CI/CD
 GitHub Actions workflows are configured for automated testing and deployment.
@@ -171,11 +160,11 @@ GitHub Actions workflows are configured for automated testing and deployment.
 
 This project demonstrates:
 
-1. **Enterprise Architecture**: Clean architecture, DDD, dependency injection
-2. **AI Integration**: Multiple LLM providers, prompt engineering, agent orchestration
-3. **Scalability**: Async processing, queue management, vector databases
-4. **Quality Assurance**: Comprehensive testing, observability, self-healing
-5. **Modern Practices**: Type safety, containerization, CI/CD
+1. **Architecture**: FastAPI service boundaries, SQLAlchemy models, agent abstractions, and prompt modules
+2. **AI Engineering Thinking**: Mocked local agents with clear provider integration points
+3. **QA Domain Coverage**: Test generation, bug analysis, UI/API runner scaffolding, and analytics
+4. **Pragmatism**: Local demo works without paid LLM credentials, while still documenting production trade-offs
+5. **Modern Practices**: TypeScript frontend, Dockerized services, CI smoke checks
 
 ### Key Discussion Points
 - Trade-offs between different AI approaches

@@ -36,7 +36,7 @@ Scalability Features:
 """
 
 import json
-from typing import List, Dict, Any
+from typing import Any, Dict, List, Mapping
 import structlog
 
 from agents.core.agent_base import BaseAgent
@@ -154,9 +154,10 @@ class TestGeneratorAgent(BaseAgent):
             return result
 
         except Exception as e:
+            attempted = max(self.tests_generated, 1)
             self.generation_success_rate = (
-                (self.generation_success_rate * (self.tests_generated)) + 0
-            ) / (self.tests_generated + 1)
+                (self.generation_success_rate * attempted)
+            ) / (attempted + 1)
 
             self.logger.error("Test generation execution failed", error=str(e))
             return {
@@ -168,22 +169,8 @@ class TestGeneratorAgent(BaseAgent):
                     "error_type": type(e).__name__
                 }
             }
-                "test_cases": test_cases,
-                "count": len(test_cases)
-            }
 
-            self._log_execution_end(result, 0.0)  # Mock duration
-            return result
-
-        except Exception as e:
-            self.logger.error("Test generation execution failed", error=str(e))
-            return {
-                "status": "error",
-                "error": str(e),
-                "test_cases": []
-            }
-
-    async def generate_tests(self, request) -> List[Dict[str, Any]]:
+    async def generate_tests(self, request: Mapping[str, Any]) -> List[Dict[str, Any]]:
         """
         Generate test cases based on the request.
 
@@ -322,3 +309,13 @@ class TestGeneratorAgent(BaseAgent):
         except Exception as e:
             logger.error("Failed to parse LLM response", error=str(e))
             raise
+
+    def _validate_content_safety(self, source_content: str) -> None:
+        """
+        Lightweight guardrail for obviously unsafe prompt content.
+
+        This is intentionally conservative for the demo implementation; a real
+        deployment would use a richer sanitizer and audit trail.
+        """
+        if not isinstance(source_content, str) or not source_content.strip():
+            raise ValueError("source_content must be a non-empty string")

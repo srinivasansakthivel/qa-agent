@@ -45,14 +45,15 @@ services:
   # Backend API
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/backend.Dockerfile
     environment:
       - DATABASE_URL=postgresql+asyncpg://qa_user:qa_password@postgres:5432/qa_agent
       - REDIS_URL=redis://redis:6379
       - VECTOR_DB_TYPE=chromadb
       - CHROMA_DB_HOST=chromadb
       - CHROMA_DB_PORT=8000
+      - SECRET_KEY=local-development-secret
     ports:
       - "8000:8000"
     depends_on:
@@ -62,57 +63,19 @@ services:
         condition: service_healthy
       chromadb:
         condition: service_started
-    volumes:
-      - ./backend:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
 
   # Frontend
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: docker/frontend.Dockerfile
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     depends_on:
       - backend
-
-  # Celery Worker for background tasks
-  celery-worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://qa_user:qa_password@postgres:5432/qa_agent
-      - REDIS_URL=redis://redis:6379
-      - VECTOR_DB_TYPE=chromadb
-      - CHROMA_DB_HOST=chromadb
-      - CHROMA_DB_PORT=8000
-    depends_on:
-      - redis
-      - postgres
-      - chromadb
-    volumes:
-      - ./backend:/app
-    command: celery -A app.core.celery_app worker --loglevel=info
-
-  # Celery Beat for scheduled tasks
-  celery-beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://qa_user:qa_password@postgres:5432/qa_agent
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - redis
-    volumes:
-      - ./backend:/app
-    command: celery -A app.core.celery_app beat --loglevel=info
 
 volumes:
   postgres_data:

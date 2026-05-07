@@ -84,7 +84,7 @@ async def list_agents():
         service = AgentService(None)  # No DB needed for listing
         agents = service.list_available_agents()
 
-        return AgentListResponse(agents=agents)
+        return AgentListResponse(agents=agents, total_count=len(agents))
 
     except Exception as e:
         logger.error("Failed to list agents", error=str(e))

@@ -5,16 +5,15 @@ Handles AI-powered test case generation using various agents
 and prompt templates.
 """
 
-import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
-from app.core.config import settings
 from app.models.models import TestCase
 from app.schemas.test_generation import TestCaseResponse, TestStep
-from app.agents.test_generator import TestGeneratorAgent
+from agents.test_generator.agent import TestGeneratorAgent
 
 logger = structlog.get_logger(__name__)
 
@@ -37,16 +36,36 @@ class TestGenerationService:
 
         Returns a generation ID for tracking progress.
         """
-        generation_id = str(uuid.uuid4())
-
-        # Store generation request metadata (would use a cache/queue in production)
         logger.info(
             "Initiating test generation",
-            generation_id=generation_id,
             source_type=request.source_type
         )
 
-        return generation_id
+        test_cases = await self.agent.generate_tests(request.model_dump())
+
+        first_test_case_id = None
+        for test_case_data in test_cases:
+            test_case = TestCase(
+                title=test_case_data["title"],
+                description=test_case_data["description"],
+                test_type=test_case_data["test_type"],
+                priority=test_case_data.get("priority", request.priority or "medium"),
+                generated_by="TestGeneratorAgent",
+                source_type=request.source_type,
+                source_content=request.source_content,
+                steps=test_case_data.get("steps", []),
+                expected_results=test_case_data.get("expected_results", {}),
+                confidence_score=test_case_data.get("confidence_score", 0.8),
+            )
+
+            self.db.add(test_case)
+            await self.db.flush()
+            if first_test_case_id is None:
+                first_test_case_id = test_case.id
+
+        await self.db.commit()
+
+        return str(first_test_case_id or "0")
 
     async def process_generation(self, generation_id: str):
         """
@@ -55,40 +74,9 @@ class TestGenerationService:
         This would be called as a background task.
         """
         try:
-            # In a real implementation, retrieve the request from cache/queue
-            # For now, we'll simulate with a mock request
-            mock_request = type('MockRequest', (), {
-                'source_type': 'user_story',
-                'source_content': 'As a user, I want to login so that I can access my account',
-                'test_types': ['positive', 'negative']
-            })()
-
-            # Generate tests using AI agent
-            test_cases = await self.agent.generate_tests(mock_request)
-
-            # Save to database
-            for test_case_data in test_cases:
-                test_case = TestCase(
-                    title=test_case_data['title'],
-                    description=test_case_data['description'],
-                    test_type=test_case_data['test_type'],
-                    priority=test_case_data.get('priority', 'medium'),
-                    generated_by='TestGeneratorAgent',
-                    source_type=mock_request.source_type,
-                    source_content=mock_request.source_content,
-                    steps=test_case_data.get('steps', []),
-                    expected_results=test_case_data.get('expected_results', {}),
-                    confidence_score=test_case_data.get('confidence_score', 0.8)
-                )
-
-                self.db.add(test_case)
-
-            await self.db.commit()
-
             logger.info(
-                "Test generation completed",
+                "Test generation already completed synchronously",
                 generation_id=generation_id,
-                test_count=len(test_cases)
             )
 
         except Exception as e:
@@ -105,10 +93,14 @@ class TestGenerationService:
         """
         # In production, this would filter by generation_id
         # For now, return all test cases
-        result = await self.db.execute(
-            "SELECT * FROM test_cases ORDER BY created_at DESC LIMIT 50"
-        )
-        test_cases = result.fetchall()
+        stmt = select(TestCase).order_by(TestCase.created_at.desc()).limit(50)
+        result = await self.db.execute(stmt)
+        test_cases = result.scalars().all()
+
+        if generation_id.isdigit() and generation_id != "0":
+            requested_id = int(generation_id)
+            matching = [tc for tc in test_cases if tc.id == requested_id]
+            test_cases = matching or test_cases
 
         return [
             TestCaseResponse(

@@ -7,15 +7,14 @@ types of tests (API, UI, integration).
 
 import uuid
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
-from app.core.config import settings
-from app.models.models import TestExecution, TestCase
+from app.models.models import TestExecution
 from app.schemas.test_execution import TestResultResponse, TestStepResult
-from app.automation.playwright_runner import PlaywrightTestRunner
-from app.automation.api_runner import APITestRunner
+from automation.playwright_runner.runner import PlaywrightTestRunner
+from automation.api_runner.runner import APITestRunner
 
 logger = structlog.get_logger(__name__)
 
